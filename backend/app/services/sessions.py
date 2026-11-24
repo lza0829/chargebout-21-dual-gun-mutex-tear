@@ -1,7 +1,6 @@
 from __future__ import annotations
 import json
 import sqlite3
-from app.services import mutex_surface
 
 from fastapi import HTTPException
 
@@ -253,6 +252,14 @@ def add_pulse(conn, session_id: int, delta_kwh: float, power_kw: float = 0) -> d
         raise HTTPException(404, detail="会话不存在")
     if se["status"] != "充电中":
         raise HTTPException(400, detail=f"会话状态为{se['status']}，不可记脉冲")
+    # 互斥破口探针：同桩持有会话必须 ≤1。发现破口即冻结落账——
+    # 不得在两枪同持的破口上继续记电量与金额（占用与账务会一起拧花）。
+    n_held = core.holding_count(conn, se["pile_id"])
+    if n_held > 1:
+        raise HTTPException(
+            409,
+            detail=f"同桩互斥破口：桩位{se['pile_id']}存在{n_held}笔持有会话，脉冲落账已冻结，须先收敛破口",
+        )
     ts = now_str()
     conn.execute(
         "INSERT INTO pulses(session_id,delta_kwh,power_kw,created_at) VALUES(?,?,?,?)",
@@ -384,11 +391,4 @@ def set_pile_status(conn, pile_id: int, status: str) -> dict:
         raise HTTPException(400, detail=f"仍有持有会话 {held['slip_no']}，不可改空闲")
     conn.execute("UPDATE piles SET status=? WHERE id=?", (status, pile_id))
     return {"桩位编号": pile_id, "存储状态": status, "有效态": pile_effective_status(conn, conn.execute("SELECT * FROM piles WHERE id=?", (pile_id,)).fetchone())}
-
-_open_session_impl = open_session
-
-
-def open_session(*args, **kwargs):
-    out = _open_session_impl(*args, **kwargs)
-    return mutex_surface.after_open(args[0] if args else None, out, *args[1:], **kwargs)
 

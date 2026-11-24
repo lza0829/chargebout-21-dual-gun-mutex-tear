@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
 
-const surface_panel = true
 export default function Guns() {
   const [list, setList] = useState([])
   const load = () => api.枪线().then(setList)
@@ -9,7 +8,7 @@ export default function Guns() {
     load()
   }, [])
   return (
-    <div className={surface_panel ? "page" : "page"}>
+    <div className="page">
       <h2>枪线</h2>
       <p className="lead">各桩枪口有效态由持有会话推导；同桩互斥时另一枪显示为占用并注明占因。</p>
       <div className="panel">

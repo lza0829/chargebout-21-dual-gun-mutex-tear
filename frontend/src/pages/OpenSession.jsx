@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
 
-const surface_panel = true
 export default function OpenSession() {
   const [piles, setPiles] = useState([])
   const [pileId, setPileId] = useState('')
@@ -69,7 +68,7 @@ export default function OpenSession() {
   const gunBars = current?.枪线 || []
 
   return (
-    <div className={surface_panel ? "page" : "page"}>
+    <div className="page">
       <h2>开会话</h2>
       <p className="lead">
         口径：<b>同桩互斥单充</b>——同一桩位任意时刻至多一笔充电中/未结会话；另一枪点开充将整笔拒绝，且不改动已有会话。

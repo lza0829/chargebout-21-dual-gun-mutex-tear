@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
 
-const surface_panel = true
 export default function Piles() {
   const [list, setList] = useState([])
   const [msg, setMsg] = useState('')
@@ -19,7 +18,7 @@ export default function Piles() {
     }
   }
   return (
-    <div className={surface_panel ? "page" : "page"}>
+    <div className="page">
       <h2>桩位</h2>
       <p className="lead">
         占用态由「持有会话」推导（同桩互斥单充）：桩位有充电中/结算中/已超时任一未结会话即为占用，双枪条同步显示每把枪的占因。

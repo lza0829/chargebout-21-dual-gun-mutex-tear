@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
 
-const surface_panel = true
 export default function Timeout() {
   const [list, setList] = useState([])
   const [msg, setMsg] = useState('')
@@ -29,7 +28,7 @@ export default function Timeout() {
     }
   }
   return (
-    <div className={surface_panel ? "page" : "page"}>
+    <div className="page">
       <h2>超时与中断</h2>
       <p className="lead">
         对充电中会话标超时，或急停中断。已超时仍持有桩位与枪线（同桩互斥单充），须结算或中断后才释放。

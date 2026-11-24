@@ -207,3 +207,65 @@ def test_overview_counts_sessions_not_only_piles(client):
     assert o["持有会话数"] == o["充电中"] + o["结算中"] + o["已超时"]
     assert o["持有桩位数"] == o["桩位占用"]
     assert o["在充电量"] == 0.0
+
+
+def test_no_fake_parallel_light_on_receipts_or_overview(client):
+    """假并枪收口：回执与总览不得携带粉刷层；第二枪被拒后总览仍说真话。"""
+    pile = pile_by_name(client, "河甲三号")
+    left, right = pile["枪线"]
+
+    receipt = open_pile(client, pile["id"], left["id"]).json()
+    assert "并枪" not in receipt
+    assert "surface_ok" not in receipt
+    assert receipt["总览"]["充电中"] == 1
+    assert receipt["总览"]["桩位占用"] == 1
+
+    second = open_pile(client, pile["id"], right["id"])
+    assert second.status_code == 400
+    detail = second.json()["detail"]
+    assert "并枪" not in detail
+    assert "surface_ok" not in detail
+
+    # 拒绝不得粉刷总览：充电中桶不超过桩数，更不得大于持有会话数。
+    o = client.get("/api/总览").json()
+    assert not any(k.startswith("surface_") for k in o)
+    pile_total = o["桩位空闲"] + o["桩位占用"] + o["桩位故障"] + o["桩位维护"]
+    assert o["充电中"] == 1
+    assert o["充电中"] <= o["持有桩位数"] <= pile_total
+
+    # 会话册里同桩只有一行持有会话，不存在第二枪会话行。
+    holding = [
+        s
+        for s in client.get("/api/会话").json()
+        if s["pile_id"] == pile["id"] and s["持有中"]
+    ]
+    assert [s["slip_no"] for s in holding] == [receipt["会话号"]]
+
+
+def test_abort_releases_both_guns_leaving_no_ghost_occupancy(client):
+    """一枪急停：整桩同命运释放，另一枪不得残留幽灵占用（含存储态）。"""
+    pile = pile_by_name(client, "河甲三号")
+    left, right = pile["枪线"]
+    receipt = open_pile(client, pile["id"], left["id"]).json()
+
+    out = client.post(
+        f"/api/会话/{receipt['会话编号']}/中断", json={"原因": "急停"}
+    ).json()
+    assert out["状态"] == "已中断"
+    assert out["桩位有效态"] == "空闲"
+    assert out["枪线有效态"] == "可用"
+    assert all(g["状态"] == "可用" for g in out["双枪条"])
+
+    page = pile_by_name(client, "河甲三号")
+    assert page["status"] == "空闲"
+    assert all(g["状态"] == "可用" and not g["占因"] for g in page["枪线"])
+
+    # 枪线接口同一口径：有效态与存储态都不得有旁路写入的「占用」残留。
+    guns = client.get(f"/api/枪线?桩位编号={pile['id']}").json()
+    assert all(g["status"] == "可用" for g in guns)
+    assert all(g["存储状态"] == "可用" for g in guns)
+
+    o = client.get("/api/总览").json()
+    assert o["充电中"] == 0
+    assert o["桩位占用"] == 0
+    assert o["已中断"] == 1

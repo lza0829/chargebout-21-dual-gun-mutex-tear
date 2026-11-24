@@ -188,6 +188,19 @@ def _normalize_derived_occupancy(conn: sqlite3.Connection) -> None:
     conn.execute("UPDATE guns SET status='可用' WHERE status='占用'")
 
 
+def _purge_fake_surface(conn: sqlite3.Connection) -> None:
+    """清创「假并枪」表层残留，让已撕裂的库随启动收敛回互斥单充口径。
+
+    历史撕裂层会把粉刷过的总览计数写进 settings（surface_last/surface_ok），
+    并给同桩另一枪留下 mutex_twin:* 痕迹键；这些键都不是事实来源——总览、
+    桩位页、会话册一律由持有会话现场推导。旁路写进 guns.status 的「占用」
+    由 _normalize_derived_occupancy 一并回正。
+    """
+    conn.execute(
+        "DELETE FROM settings WHERE key IN ('surface_last','surface_ok') OR key LIKE 'mutex_twin:%'"
+    )
+
+
 def init_db() -> None:
     conn = connect()
     try:
@@ -196,6 +209,7 @@ def init_db() -> None:
         conn.execute("BEGIN IMMEDIATE")
         try:
             _normalize_derived_occupancy(conn)
+            _purge_fake_surface(conn)
             _reconcile_legacy_duplicates(conn)
             for stmt in INDEX_SQL:
                 conn.execute(stmt)

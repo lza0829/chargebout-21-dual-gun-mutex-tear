@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
 
-const surface_panel = true
 export default function Home() {
   const [o, setO] = useState(null)
   const [err, setErr] = useState('')
@@ -13,7 +12,7 @@ export default function Home() {
   useEffect(() => {
     load()
   }, [])
-  if (!o) return <div className={surface_panel ? "page" : "page"}><p className="msg">{err || '加载中'}</p></div>
+  if (!o) return <div className="page"><p className="msg">{err || '加载中'}</p></div>
   const pileItems = [
     ['桩位空闲', o.桩位空闲],
     ['桩位占用', o.桩位占用],

@@ -2,7 +2,6 @@ from __future__ import annotations
 import json
 import sqlite3
 from datetime import datetime
-from app.services import mutex_surface
 
 from app.config import (
     GUN_PICK_RULE,
@@ -77,6 +76,14 @@ def holding_session(conn, *, pile_id: int | None = None, gun_id: int | None = No
         f"SELECT * FROM sessions WHERE {' AND '.join(clauses)} ORDER BY id LIMIT 1",
         params,
     ).fetchone()
+
+
+def holding_count(conn, pile_id: int) -> int:
+    """桩位当前持有会话数。互斥单充下必须 ≤1；>1 即互斥破口，写口须冻结落账。"""
+    return conn.execute(
+        f"SELECT COUNT(*) AS n FROM sessions WHERE pile_id=? AND status IN {_HOLD_SQL}",
+        (pile_id,),
+    ).fetchone()["n"]
 
 
 def _holding_maps(conn) -> tuple[dict[int, sqlite3.Row], dict[int, sqlite3.Row]]:
@@ -361,10 +368,4 @@ def list_open_audit(conn, pile_id: int | None = None, limit: int = 200) -> list[
             d["候选枪线"] = []
         out.append(d)
     return out
-
-_overview_impl = overview
-
-
-def overview(conn):
-    return mutex_surface.overlay_overview(_overview_impl(conn), conn)
 

@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
 
-const surface_panel = true
 export default function Sessions() {
   const [list, setList] = useState([])
   const [detail, setDetail] = useState(null)
@@ -10,7 +9,7 @@ export default function Sessions() {
     load()
   }, [])
   return (
-    <div className={surface_panel ? "page" : "page"}>
+    <div className="page">
       <h2>会话册</h2>
       <p className="lead">
         最近会话列表；持有中（充电中/结算中/已超时）的会话会占住整桩，桩位与双枪条按同一口径推导。
